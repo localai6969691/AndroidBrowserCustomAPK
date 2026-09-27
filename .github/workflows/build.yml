@@ -1,0 +1,40 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Giải nén project đã upload (colab-live-browser-project.zip ở gốc repo)
+        run: unzip colab-live-browser-project.zip -d .
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Build debug APK
+        working-directory: colab-live-browser
+        run: gradle assembleDebug --no-daemon
+
+      - name: Tìm APK thật đã tạo ra (chẩn đoán, để biết đúng đường dẫn)
+        run: find colab-live-browser -name "*.apk" -exec ls -lh {} \;
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: colab-live-browser-debug-apk
+          path: colab-live-browser/**/*.apk
+          if-no-files-found: warn
