@@ -32,6 +32,24 @@ jobs:
       - name: Tìm APK thật đã tạo ra (chẩn đoán, để biết đúng đường dẫn)
         run: find colab-live-browser -name "*.apk" -exec ls -lh {} \;
 
+      - name: Phân tích dung lượng APK (cái gì đang chiếm chỗ)
+        if: always()
+        run: |
+          APK=$(find colab-live-browser -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then echo "Không có APK để phân tích"; exit 0; fi
+          {
+            echo "## Dung lượng APK"
+            echo '```'
+            ls -lh "$APK"
+            echo
+            echo "== Tổng theo nhóm: MB chưa nén / MB đã nén trong APK =="
+            unzip -lv "$APK" | awk 'NR>3 && NF>=8 { n=split($NF,p,"/"); g=p[1]; if (g ~ /^classes/) g="classes*.dex"; if (g=="lib" && n>=3) g="lib/" p[2]; un[g]+=$1; co[g]+=$3 } END { for (g in un) printf "%8.1f / %8.1f  %s\n", un[g]/1048576, co[g]/1048576, g }' | sort -rn
+            echo
+            echo "== 25 tệp lớn nhất: MB chưa nén / MB đã nén =="
+            unzip -lv "$APK" | awk 'NR>3 && NF>=8 { printf "%8.1f / %8.1f  %s\n", $1/1048576, $3/1048576, $NF }' | sort -rn | head -25
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
