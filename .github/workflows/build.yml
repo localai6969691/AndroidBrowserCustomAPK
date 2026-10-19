@@ -27,7 +27,19 @@ jobs:
 
       - name: Build debug APK
         working-directory: colab-live-browser
-        run: gradle assembleDebug --no-daemon
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --console=plain 2>&1 | tee "$GITHUB_WORKSPACE/gradle-build.log"
+
+      - name: Tóm tắt LỖI biên dịch (copy từ trang Summary của lần chạy)
+        if: failure()
+        run: |
+          {
+            echo "## Lỗi build"
+            echo '```'
+            grep -nE "^e: |error:|FAILURE|What went wrong|Execution failed|Unresolved reference|Type mismatch" "$GITHUB_WORKSPACE/gradle-build.log" | head -80 || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Tìm APK thật đã tạo ra (chẩn đoán, để biết đúng đường dẫn)
         run: find colab-live-browser -name "*.apk" -exec ls -lh {} \;
